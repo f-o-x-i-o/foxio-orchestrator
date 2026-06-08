@@ -1,3 +1,4 @@
 # Skills descargadas en proyectos (cache local, no son la librería personal)
 .claude/skills/*
 !.claude/skills/.gitkeep
+!.claude/skills/SKILL_LOG.md
