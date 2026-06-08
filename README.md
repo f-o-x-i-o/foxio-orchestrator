@@ -62,7 +62,7 @@ export FOXIO_SKILLS_LIBRARY="$HOME/Development/foxio-orchestrator/library/skills
     foxio_orchestrator.md   # orquestador — tu punto de entrada
     specialist.md           # ejecutor genérico
   commands/
-    spec.md                 # /spec — genera el spec-kit con vos
+    spec.md                 # /spec — genera el spec-kit (formato OpenSpec)
     skill-save.md           # /skill-save — guarda una skill a la librería
     skill-list.md           # /skill-list — muestra tu librería
   skills/
@@ -72,9 +72,16 @@ library/
   skills/                   # TUS skills evolucionadas (versionadas en git)
     README.md
     {nombre}.md             # una skill por archivo
+openspec/
+  changes/
+    {slug}/                 # un cambio = una carpeta
+      proposal.md           # problema, solución, criterios de éxito
+      specs/
+        requirements.md     # req funcionales, no funcionales y escenarios
+      design.md             # enfoque técnico y decisiones de arquitectura
+      tasks.md              # checklist numerado para el sprint
 specs/
-  constitution.md           # restricciones inviolables (plantilla)
-  spec.md                   # requerimientos + acceptance (plantilla)
+  constitution.md           # restricciones inviolables del proyecto (siempre)
 ```
 
 ## Instalación
@@ -88,15 +95,18 @@ specs/
 4. `claude` en el repo, `/agents` para verificar `foxio_orchestrator` y `specialist`.
 
 ## Flujo de uso
-1. `/spec [descripción]` → escribe `constitution.md` + `spec.md`. Aprobás.
+1. `/spec [descripción]` → te entrevista y genera los 5 artefactos OpenSpec:
+   `constitution.md` + `proposal.md` + `requirements.md` + `design.md` + `tasks.md`. Aprobás.
 2. "usá el foxio_orchestrator, leé el spec y armá el equipo".
-3. Te muestra: capacidades → 📚 de tu librería (directo) + 🌐 candidatas de
+3. El orquestador lee los artefactos: toma los AC del `proposal.md` como criterio
+   de done y precarga el `tasks.md` en el TodoWrite.
+4. Te muestra: capacidades → 📚 de tu librería (directo) + 🌐 candidatas de
    skills.sh con reputación (esperá tu OK para instalar).
-4. Instala las aprobadas, propone plan + orden. Aprobás. Despacha, integra, resume.
-5. En cada milestone: retrospectiva → propone aprender/podar/guardar en librería
+5. Instala las aprobadas, propone plan + orden. Aprobás. Despacha, integra, resume.
+6. En cada milestone: retrospectiva → propone aprender/podar/guardar en librería
    → **te pregunta** → registra en `SKILL_LOG.md`.
-6. Al cierre: `/skill-save [nombre]` para promover las skills mejoradas a tu
-   librería. `git commit + push` para respaldarlas.
+7. Al cierre: tasks.md actualizado con checkboxes, `/skill-save [nombre]` para
+   promover skills mejoradas a tu librería. `git commit + push` para respaldar.
 
 ## Catálogo de "sabiduría" relevante en skills.sh (para traer bajo demanda)
 - `brainstorming` — descomposición/ideación (rol "system architect")

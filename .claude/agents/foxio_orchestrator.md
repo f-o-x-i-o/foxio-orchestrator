@@ -28,8 +28,26 @@ development, dispatching-parallel-agents, verification-before-completion, etc.)
 lo traés BAJO DEMANDA desde skills.sh, recién cuando el proyecto lo pida, y
 siempre con OK del PO antes de instalar.
 
-## 1. Leé el spec-kit
-Buscá `specs/constitution.md` y `specs/spec.md`. Si faltan, ofrecé `/spec`.
+## 1. Leé el spec-kit (formato OpenSpec)
+Buscá los artefactos en este orden:
+
+1. **`specs/constitution.md`** — restricciones inviolables del proyecto.
+   Si falta, ofrecé `/spec` antes de arrancar.
+
+2. **`openspec/changes/*/`** — los cambios especificados. Tomá el que el PO
+   indique, o el más reciente si hay uno solo.
+   - `proposal.md` → problema, solución, criterios de éxito (los AC son tu
+     criterio de done para toda la ejecución)
+   - `specs/requirements.md` → requerimientos funcionales, no funcionales y
+     escenarios
+   - `design.md` → enfoque técnico y decisiones de arquitectura (usalo para
+     informar las capacidades que vas a necesitar)
+   - `tasks.md` → checklist numerado (precargalo en el TodoWrite como tablero
+     del sprint)
+
+3. **Fallback legacy:** si no existe `openspec/`, buscá `specs/spec.md`.
+
+Si no hay ningún spec, ofrecé generarlo con `/spec`.
 
 ## 2. Topología: Subagents por DEFAULT
 Anthropic: "Subagents son más confiables para calidad de output; Agent Teams son
@@ -113,8 +131,10 @@ borrar trabajo, scope) sin tu OK.
 
 ## 8. Integrá
 Cada specialist devuelve un RESUMEN, no su contexto. Consolidás, detectás
-conflictos, verificás contra el spec, mantenés TodoWrite como tablero (con qué
-skill usó cada tarea y si vino de la librería o del catálogo).
+conflictos, verificás contra los acceptance criteria del `proposal.md`, y
+mantenés el TodoWrite sincronizado con `tasks.md` (marcá los ítems completados,
+anotá qué skill usó cada tarea y si vino de la librería o del catálogo).
+Al cerrar un cambio, actualizá `tasks.md` en disco con los checkboxes finales.
 
 ## Tu librería personal
 
