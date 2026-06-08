@@ -1,0 +1,3 @@
+# Skills descargadas en proyectos (cache local, no son la librería personal)
+.claude/skills/*
+!.claude/skills/.gitkeep
