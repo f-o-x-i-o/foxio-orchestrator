@@ -83,21 +83,96 @@ En un PROYECTO real se suma `openspec/` (lo crea `openspec init`): `openspec/spe
    ```
 5. Abrí `claude`, corré `/agents` y verificá `foxio_orchestrator` y `specialist`.
 
-## Flujo de uso
-1. **`/spec [descripción]`** → bootstrapea OpenSpec (`openspec init`) y la
-   constitution; te dice que corras `/opsx:propose`.
-2. **`/opsx:propose <descripción>`** (OpenSpec) → crea `openspec/changes/<slug>/`
-   con proposal + delta-specs + design + tasks. Validás con `openspec validate`. Aprobás.
-3. *"foxio_orchestrator, leé el cambio y armá el equipo"* → lee los artefactos,
-   toma los criterios de éxito como done, precarga `tasks.md` en su tablero.
-4. Te muestra capacidades → 📚 de tu librería (directo) + 🌐 candidatas de skills.sh
-   con la reputación que haya. **Aprobás qué instalar.**
-5. Despacha specialists, integra contra los escenarios de los delta-specs, te resume.
-6. En cada milestone: retrospectiva → aprender/podar/guardar → **te pregunta** →
-   registra en `SKILL_LOG.md`.
-7. Al cierre: `tasks.md` con checkboxes, y corrés **`/opsx:archive`** (mergea los
-   delta-specs al source of truth). `/skill-save <nombre>` + `git push` para
-   respaldar las skills mejoradas.
+## Workflow de trabajo
+
+Un loop con vos (el PO) adentro y **gates** ⛔ donde el agente para y espera tu OK.
+Nada irreversible pasa sin tu aprobación.
+
+```
+  /spec  ──►  /opsx:propose  ──►  foxio_orchestrator  ──►  specialists  ──►  /opsx:archive
+(bootstrap)   (spec-kit)         (planifica + skills)      (ejecutan)        (mergea al
+                                        │   ▲                   │             source of truth)
+                                        │   └──── resúmenes ◄────┘
+                                        ▼
+                                 vos aprobás en
+                                  cada GATE ⛔
+```
+
+| # | Fase | Quién | Qué pasa | Gate |
+|---|------|-------|----------|------|
+| 0 | Setup | vos | `npm i -g @fission-ai/openspec`, copiás `.claude/`, `export FOXIO_SKILLS_LIBRARY` | — |
+| 1 | Especificar | vos + OpenSpec | `/spec` bootstrapea; `/opsx:propose` crea el spec-kit; `openspec validate` | aprobás el spec |
+| 2 | Planificar | orquestador | lee el cambio, deriva **capacidades**, propone skills (📚 librería / 🌐 skills.sh) | ⛔ OK para instalar |
+| 3 | Despachar | orquestador | propone plan de equipo + orden (Subagents por default) | ⛔ OK para despachar |
+| 4 | Ejecutar | specialists | cada uno carga su skill, hace UNA tarea, devuelve un resumen | ⛔ OK tras cada tanda |
+| 5 | Integrar | orquestador | verifica contra los escenarios GIVEN/WHEN/THEN + criterios de éxito | — |
+| 6 | Retrospectiva | orquestador + vos | aprender / podar / guardar skills; registra en `SKILL_LOG.md` | ⛔ OK para tocar skills |
+| 7 | Cerrar | vos | `/opsx:archive` mergea los delta-specs; `/skill-save` + `git push` respalda | — |
+
+## Ejemplo completo: un acortador de URLs
+
+Proyecto de juguete, estándar y con mil referencias online para contrastar: una
+API REST que acorta URLs (`POST /shorten` → código; `GET /:code` → redirect 301).
+
+**1. El spec** (lo genera `/opsx:propose`, lo aprobás vos). Criterios de éxito en
+`proposal.md`:
+
+| ID | Criterio | Corte medible |
+|----|----------|---------------|
+| AC-1 | `POST /shorten` devuelve un código base62 de 7 chars | `^[0-9A-Za-z]{7}$` |
+| AC-2 | `GET /:code` redirige a la URL original | HTTP 301 + `Location` |
+| AC-3 | URL inválida → error | HTTP 400 |
+| AC-4 | código inexistente → no encontrado | HTTP 404 |
+| AC-5 | la misma URL pedida 2 veces → el mismo código | idempotente |
+
+**2. El orquestador deriva capacidades y arma el equipo.** Tres capacidades → tres
+specialists, cada uno con su skill real de skills.sh (la primera vez la librería
+está vacía, así que las trae del catálogo y te pide OK):
+
+| Rol (specialist) | Capacidad | Skill (skills.sh) | Installs |
+|------------------|-----------|-------------------|----------|
+| **Backend dev** | API REST + persistencia | `mrgoonie/claudekit-skills@backend-development` | 1.4K |
+| **QA engineer** | tests de los 5 escenarios | `addyosmani/agent-skills@test-driven-development` | 4.6K |
+| **CI/CD engineer** | pipeline GitHub Actions | `ruvnet/ruflo@agent-ops-cicd-github` | 654 |
+
+**3. Cómo se ve en la práctica** (transcript abreviado):
+
+```
+vos:          /spec una API REST que acorta URLs
+/spec:        OpenSpec listo. Corré  /opsx:propose acortador de URLs
+
+vos:          /opsx:propose acortador de URLs
+              → revisás los artefactos, corrés  openspec validate , aprobás
+
+vos:          foxio_orchestrator, leé el cambio y armá el equipo
+orquestador:  Leí el cambio add-url-shortener. Capacidades:
+                1) API REST + persistencia   2) suite de tests   3) CI/CD
+              Tu librería está vacía → busqué en skills.sh (ordenado por installs):
+                backend  → backend-development           (1.4K)
+                QA       → test-driven-development        (4.6K)
+                CI/CD    → agent-ops-cicd-github          (654)
+              ¿Instalo estas tres?                                      ⛔ GATE
+vos:          dale
+orquestador:  Instaladas (anotadas en SKILL_LOG). Plan — Subagents secuencial:
+                #1 backend → endpoints + storage
+                #2 QA      → tests contra AC-1..AC-5
+                #3 CI/CD   → Actions (install→lint→test) en cada push
+              ¿Despacho?                                                ⛔ GATE
+vos:          sí
+orquestador:  #1 ✓ POST /shorten, GET /:code, store SQLite, base62(id++)
+              #2 ✓ 11 tests; AC-5 (idempotencia) destapó un bug → lo reporté
+              #3 ✓ .github/workflows/ci.yml (install→lint→test)
+              Conflicto: el design no definía URLs duplicadas bajo carga.
+              ¿Lo cierro idempotente antes de archivar?                 ⛔ GATE
+vos:          sí, cerralo
+orquestador:  Hecho. tasks.md con todos los checkboxes. Retrospectiva:
+              adapté backend-development a tu estilo (storage detrás de interfaz,
+              tests en host). ¿Lo guardás como tu foxio-backend?  → /skill-save
+              Cuando quieras, corré  /opsx:archive  para mergear los specs.
+```
+
+**4. La próxima vez** que arranques una API REST, el orquestador ya encuentra tu
+`foxio-backend` en la librería (📚) y la usa directo, sin volver al catálogo.
 
 ## El CLI `skills` (lo que usa el orquestador)
 | Comando | Uso |
