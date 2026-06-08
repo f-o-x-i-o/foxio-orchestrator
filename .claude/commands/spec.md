@@ -1,151 +1,55 @@
 ---
-description: Genera el spec-kit en formato OpenSpec para un proyecto nuevo, a partir de una conversación con el PO.
+description: Bootstrapea OpenSpec en el proyecto (instala el CLI + init) y arranca el flujo de spec con /opsx:propose.
 ---
 
-Generá el spec-kit del proyecto en formato OpenSpec. Hacelo en diálogo con el PO,
-no de una sola. El output son 5 artefactos: constitution + proposal + requirements
-+ design + tasks.
+Preparás el proyecto para spec-driven development con OpenSpec real
+(`@fission-ai/openspec`). NO generás los specs a mano: OpenSpec tiene su propio
+flujo (`/opsx:propose → apply → sync → archive`) y su validador. Tu trabajo es
+dejar todo instalado y manejar la constitution de Foxio, que OpenSpec no cubre.
 
 Argumentos del usuario: $ARGUMENTS
 
-## Paso 1 — Entrevistá al PO (una ronda, no más de 6 preguntas)
-
-Cubrí lo mínimo indispensable:
-- **Problema / por qué**: qué no funciona, qué falta, qué genera pain.
-- **Solución propuesta / qué**: qué va a cambiar, a alto nivel.
-- **Restricciones duras**: plataforma/target, latencia, CPU/RAM/flash, certificación, licencia.
-- **Scope**: qué entra explícitamente y qué queda FUERA en esta iteración.
-- **Criterios de aceptación medibles**: cómo sabemos que está hecho (con números).
-
-Si $ARGUMENTS contiene suficiente contexto para varias respuestas, usálo y preguntá
-solo lo que falte.
-
-## Paso 2 — Derivá el slug
-
-Del nombre del proyecto generá un slug en kebab-case.
-Ejemplo: "Ψ-CLK para VCV Rack 2" → `psi-clk-vcv-rack2`
-
-## Paso 3 — Creá los 5 artefactos
-
-### `specs/constitution.md` — restricciones inviolables del proyecto
-(Se crea una vez por proyecto. Si ya existe, actualizá solo las restricciones duras.)
-
-```markdown
-# Constitution — [Nombre del proyecto]
-
-> Restricciones inviolables. El foxio_orchestrator y todos los specialists las
-> respetan sin excepción. Si algo entra en conflicto con una tarea, gana la
-> constitution y se escala al PO.
-
-## Propósito
-[Una o dos frases: qué es y para qué.]
-
-## Restricciones duras
-- Plataforma / target: [ej. STM32H723, VCV Rack 2 plugin, web]
-- Tiempo real / latencia: [ej. buffer de audio < 1 ms, ODR 32 kHz — o N/A]
-- Recursos: [CPU %, RAM, flash — con número — o N/A]
-- Certificación / seguridad: [ej. IEC 61010 — o N/A]
-- Licencia: [ej. GPL-3.0, MIT, propietario]
-
-## Principios de diseño
-- [ej. HAL separada de la lógica para testear en host]
-- [ej. acceptance criteria siempre medibles con número]
-
-## Fuera de scope (permanente)
-- [Lo que nunca entra en este proyecto, en ninguna iteración.]
+## Paso 1 — ¿Está el CLI de OpenSpec?
+```bash
+openspec --version 2>/dev/null || echo "NO_INSTALADO"
+```
+Si dice `NO_INSTALADO`, mostrale al PO cómo instalarlo y esperá:
+```bash
+npm install -g @fission-ai/openspec@latest   # requiere Node ≥ 20.19
 ```
 
----
-
-### `openspec/changes/{slug}/proposal.md` — el "por qué" y el "qué"
-
-```markdown
-# [Título del proyecto / cambio]
-
-## Problema
-[Por qué hacemos esto. Qué duele, qué falta, qué riesgo existe sin esto.]
-
-## Solución propuesta
-[Qué va a cambiar. Sin detalles de implementación todavía — eso va en design.md.]
-
-## Experiencia esperada
-[Qué puede hacer el usuario / sistema que antes no podía. Observable y concreto.]
-
-## No-goals (fuera de scope en esta iteración)
-- [Lo que explícitamente NO hacemos acá.]
-
-## Criterios de éxito
-| ID | Criterio | Métrica / corte |
-|----|----------|-----------------|
-| AC-1 | [...] | [ej. THD < 0.5 %] |
-| AC-2 | [...] | [...] |
+## Paso 2 — ¿Está inicializado en el proyecto?
+```bash
+test -d openspec && echo "YA_INIT" || echo "FALTA_INIT"
 ```
+Si falta, corré `openspec init` (genera `openspec/`, `config.yaml` y los comandos
+nativos `/opsx:*` para Claude Code). Mostrale el output al PO.
 
----
-
-### `openspec/changes/{slug}/specs/requirements.md` — req + escenarios
-
-```markdown
-# Requerimientos — [título]
-
-## Funcionales
-- RF-1: [...]
-- RF-2: [...]
-
-## No funcionales
-- RNF-1: [siempre con número: latencia < X ms, throughput > Y, etc.]
-- RNF-2: [...]
-
-## Escenarios
-### Escenario A — [nombre descriptivo]
-**Dado** [contexto inicial]
-**Cuando** [acción / evento]
-**Entonces** [resultado observable y verificable]
-
-### Escenario B — [nombre]
-[...]
+## Paso 3 — Constitution de Foxio (capa propia, encima de OpenSpec)
+OpenSpec maneja proposals/specs/tasks, pero NO tiene el concepto de "restricciones
+inviolables" de Foxio. Asegurá que exista `specs/constitution.md`:
+```bash
+test -f specs/constitution.md && echo "OK" || echo "FALTA"
 ```
+- Si falta, copiá la plantilla desde este toolkit y entrevistá al PO SOLO para las
+  restricciones duras (plataforma/target, latencia, CPU/RAM/flash, certificación,
+  licencia). `specs/constitution.md` es la ÚNICA fuente de la constitution —
+  no la dupliques en otro lado.
+- Si querés, sembrá el contexto en `openspec/config.yaml` (sección `context`/`rules`)
+  a partir de la constitution, para que OpenSpec lo tenga presente.
 
----
+## Paso 4 — Arrancá el spec con el comando nativo
+Decile al PO que corra el flujo de OpenSpec (vos no podés invocar slash commands
+por él):
 
-### `openspec/changes/{slug}/design.md` — enfoque técnico
+> "Todo listo. Para especificar el cambio, corré:
+> **`/opsx:propose <descripción-corta>`**
+> OpenSpec va a crear `openspec/changes/<slug>/` con `proposal.md`, `specs/`
+> (delta-specs ADDED/MODIFIED/REMOVED), `design.md` y `tasks.md`.
+> Después validá con `openspec validate` y, cuando lo apruebes, decime
+> *'leé el cambio y armá el equipo'* para que el foxio_orchestrator lo ejecute."
 
-```markdown
-# Diseño técnico — [título]
-
-## Enfoque
-[Decisión de arquitectura top-level. Por qué este approach y no otro.]
-
-## Componentes / módulos
-[Qué se crea, qué se modifica, interfaces clave entre módulos.]
-
-## Consideraciones de plataforma
-[HAL, restricciones de hardware, dependencias externas, ABI.]
-
-## Riesgos y trade-offs
-[Lo que podría salir mal o las tensiones entre objetivos. Honesto.]
-```
-
----
-
-### `openspec/changes/{slug}/tasks.md` — checklist de implementación
-
-```markdown
-# Tasks — [título]
-
-- [ ] 1.1 [Primera tarea concreta y acotada]
-- [ ] 1.2 [...]
-- [ ] 2.1 [Segunda área de trabajo]
-- [ ] 2.2 [...]
-```
-
-Los números agrupan por área (1.x = área 1, 2.x = área 2). Cada item debe ser
-ejecutable por un specialist en una sola sesión.
-
----
-
-## Paso 4 — Mostrá al PO y pedí aprobación
-
-Resumí los artefactos generados (paths + un vistazo a los criterios de éxito y
-las tareas). **No pasés el control al foxio_orchestrator hasta recibir OK
-explícito del PO.**
+Si OpenSpec no estuviera disponible por algún motivo, avisá al PO y ofrecé el
+fallback mínimo (generar a mano `openspec/changes/<slug>/{proposal,design,tasks}.md`
++ `specs/<dominio>/spec.md` en formato delta), aclarando que `openspec validate`
+no estará disponible hasta instalar el CLI.

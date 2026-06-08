@@ -1,59 +1,44 @@
-# foxio_orchestrator — orquestador con skill set evolutivo + librería personal
+# foxio_orchestrator
 
-Orquestación multi-agente con humano en el loop. El equipo NO está hardcodeado y
-el skill set del orquestador TAMPOCO: arranca de una base mínima de sabiduría,
-crece/poda con el tiempo, y **recuerda tus versiones mejoradas de cada skill
-entre proyectos**.
+Orquestación multi-agente con humano en el loop para Claude Code. El equipo NO
+está hardcodeado y el skill set del orquestador TAMPOCO: arranca de una base
+mínima, trae skills bajo demanda desde [skills.sh](https://skills.sh), y
+**recuerda tus versiones mejoradas de cada skill entre proyectos**. La
+especificación de cada proyecto la maneja [OpenSpec](https://github.com/Fission-AI/OpenSpec).
 
-Vos sos el **Product Owner**. Hablás con el **foxio_orchestrator**.
+Vos sos el **Product Owner (PO)**. Hablás con el **foxio_orchestrator**.
+
+> ¿Primera vez? Leé **[GUIDE.md](GUIDE.md)** — el paso a paso para dummies.
+
+## Este repo es dos cosas
+
+1. **Un toolkit que copiás a tus proyectos**: los agentes (`.claude/agents/`),
+   los comandos (`.claude/commands/`) y la plantilla `specs/constitution.md`.
+2. **El hogar git-backed de tu librería personal de skills** (`library/skills/`),
+   que vive SOLO acá y se referencia desde cualquier proyecto vía la variable de
+   entorno `FOXIO_SKILLS_LIBRARY`.
 
 ## Modelo mental
 - **Subagentes** = ejecutores aislados. Hay dos: `foxio_orchestrator` (orquesta)
   y `specialist` (ejecuta, genérico — se despacha N veces).
-- **Skills (skills.sh)** = conocimiento procedural (`SKILL.md`) que un specialist
-  o el orquestador carga para saber CÓMO hacer algo. NO son agentes corriendo.
-- **Librería personal** (`library/skills/`) = TUS versiones de esas skills,
-  evolucionadas con contexto Foxio. El orquestador siempre las prefiere.
-- El equipo y el skill set se construyen en runtime, siempre con tu aprobación.
-
-## Librería personal de skills
-
-La clave del sistema: cada skill que usás se puede guardar en `library/skills/`.
-Con el tiempo acumulan tus decisiones de diseño, restricciones de plataforma y
-contexto Foxio — cosas que skills.sh no sabe.
-
-```
-library/skills/
-  ux-designer.md       ← tu versión, ya con tus ajustes
-  firmware-stm32.md    ← descargada, le agregaste la HAL de Foxio
-  qa-audio-dsp.md      ← creada desde cero con skill-creator
-```
-
-**Flujo de una skill:**
-1. El orquestador busca en `library/skills/` → si está, la usa directo (📚 tuya).
-2. Si no está, la trae de skills.sh → te pregunta si la guardás en la librería.
-3. La mejorás en el proyecto → `/skill-save {nombre}` la promueve a la librería.
-4. Próximo proyecto → el orquestador ya arranca con tu versión mejorada.
-
-**Comandos:**
-- `/skill-list` → tus skills con descripción y fecha de guardado
-- `/skill-save [nombre]` → guardar/actualizar desde el proyecto actual
-
-**Setup (una vez por máquina):** agregá a tu `.zshrc` / `.bashrc`:
-```sh
-export FOXIO_SKILLS_LIBRARY="$HOME/Development/foxio-orchestrator/library/skills"
-```
+- **Skills** = conocimiento procedural (carpeta `<nombre>/SKILL.md`) que un
+  specialist carga para saber CÓMO hacer algo. NO son agentes corriendo.
+- **Librería personal** = TUS versiones de esas skills, evolucionadas con contexto
+  Foxio. El orquestador siempre las prefiere.
+- **OpenSpec** = el spec-kit: `proposal` + delta-specs + `design` + `tasks` por
+  cada cambio, con un *source of truth* que se actualiza al archivar.
 
 ## Decisiones de diseño (tus defaults)
-- **Skill set base = mínimo:** arranca solo con `find-skills` + `skill-creator`.
-  Todo lo demás se trae bajo demanda, con tu aprobación.
-- **Topología = Subagents por default** (Anthropic: más confiable para calidad de
-  output). Pasa a Agent Teams / paralelo SOLO si vos lo pedís explícitamente.
-- **Skill set evolutivo:** en los milestones hace retrospectiva y propone APRENDER
-  (traer/crear/guardar en librería) o PODAR (remover del proyecto). **Nunca toca
-  skills sin tu sí explícito.** Todo queda registrado en `SKILL_LOG.md`.
-- **Librería personal primero:** antes de ir a skills.sh siempre chequea tu
-  librería. Tu versión evolucionada de una skill siempre gana.
+- **Spec-kit = OpenSpec real** (`@fission-ai/openspec`), no una imitación. Flujo
+  nativo `/opsx:propose → apply → sync → archive`, con `openspec validate`.
+- **Base de skills = mínima:** el CLI `skills` ya da `find/add/remove`; solo se
+  suma `skill-creator` para autoría. Todo lo demás se trae bajo demanda, con tu OK.
+- **Topología = Subagents por default** (Anthropic: más confiable para calidad).
+  Pasa a Agent Teams / paralelo SOLO si vos lo pedís.
+- **Skill set evolutivo:** en los milestones propone APRENDER (traer/crear/guardar)
+  o PODAR (remover). **Nunca toca skills sin tu sí.** Todo va a `SKILL_LOG.md`.
+- **Librería personal primero:** antes de skills.sh chequea tu librería; si el
+  path no existe, **avisa en vez de seguir en silencio**.
 
 ## Estructura
 ```
@@ -62,69 +47,90 @@ export FOXIO_SKILLS_LIBRARY="$HOME/Development/foxio-orchestrator/library/skills
     foxio_orchestrator.md   # orquestador — tu punto de entrada
     specialist.md           # ejecutor genérico
   commands/
-    spec.md                 # /spec — genera el spec-kit (formato OpenSpec)
+    spec.md                 # /spec — bootstrapea OpenSpec (init + constitution)
     skill-save.md           # /skill-save — guarda una skill a la librería
     skill-list.md           # /skill-list — muestra tu librería
   skills/
     SKILL_LOG.md            # registro de altas/bajas (trazabilidad)
-    (skills instaladas — gitignored, son cache del proyecto)
+    (skills del proyecto — gitignored, son cache local)
 library/
-  skills/                   # TUS skills evolucionadas (versionadas en git)
+  skills/                   # TU librería personal (versionada en git)
     README.md
-    {nombre}.md             # una skill por archivo
-openspec/
-  changes/
-    {slug}/                 # un cambio = una carpeta
-      proposal.md           # problema, solución, criterios de éxito
-      specs/
-        requirements.md     # req funcionales, no funcionales y escenarios
-      design.md             # enfoque técnico y decisiones de arquitectura
-      tasks.md              # checklist numerado para el sprint
+    <nombre>/SKILL.md       # una carpeta por skill
 specs/
-  constitution.md           # restricciones inviolables del proyecto (siempre)
+  constitution.md           # restricciones inviolables (única fuente)
+tests/
+  validate.py               # validación estática del toolkit (sin LLM)
+  scenarios/                # evals de comportamiento del agente
+GUIDE.md                    # manual para dummies
 ```
+En un PROYECTO real se suma `openspec/` (lo crea `openspec init`): `openspec/specs/`
+(source of truth) y `openspec/changes/<slug>/` (proposal, delta-specs, design, tasks).
 
-## Instalación
-1. Copiá `.claude/` (y `specs/`) a la raíz de tu repo.
-2. Instalá la base mínima (una vez):
+## Instalación (en tu proyecto)
+1. **Node ≥ 20.19** y el CLI de OpenSpec:
+   ```bash
+   npm install -g @fission-ai/openspec@latest
    ```
-   npx skills add https://github.com/vercel-labs/skills --skill find-skills
-   npx skills add anthropics/skills --skill skill-creator
+2. Copiá `.claude/` y `specs/constitution.md` de este toolkit a la raíz de tu repo.
+3. (Opcional) skill de autoría:
+   ```bash
+   npx skills add anthropics/skills --skill skill-creator -a claude-code --copy -y
    ```
-3. Agregá el env var a tu shell (ver arriba).
-4. `claude` en el repo, `/agents` para verificar `foxio_orchestrator` y `specialist`.
+4. Apuntá tu librería personal (en tu shell, una vez por máquina):
+   ```bash
+   export FOXIO_SKILLS_LIBRARY="$HOME/Development/foxio-orchestrator/library/skills"
+   ```
+5. Abrí `claude`, corré `/agents` y verificá `foxio_orchestrator` y `specialist`.
 
 ## Flujo de uso
-1. `/spec [descripción]` → te entrevista y genera los 5 artefactos OpenSpec:
-   `constitution.md` + `proposal.md` + `requirements.md` + `design.md` + `tasks.md`. Aprobás.
-2. "usá el foxio_orchestrator, leé el spec y armá el equipo".
-3. El orquestador lee los artefactos: toma los AC del `proposal.md` como criterio
-   de done y precarga el `tasks.md` en el TodoWrite.
-4. Te muestra: capacidades → 📚 de tu librería (directo) + 🌐 candidatas de
-   skills.sh con reputación (esperá tu OK para instalar).
-5. Instala las aprobadas, propone plan + orden. Aprobás. Despacha, integra, resume.
-6. En cada milestone: retrospectiva → propone aprender/podar/guardar en librería
-   → **te pregunta** → registra en `SKILL_LOG.md`.
-7. Al cierre: tasks.md actualizado con checkboxes, `/skill-save [nombre]` para
-   promover skills mejoradas a tu librería. `git commit + push` para respaldar.
+1. **`/spec [descripción]`** → bootstrapea OpenSpec (`openspec init`) y la
+   constitution; te dice que corras `/opsx:propose`.
+2. **`/opsx:propose <descripción>`** (OpenSpec) → crea `openspec/changes/<slug>/`
+   con proposal + delta-specs + design + tasks. Validás con `openspec validate`. Aprobás.
+3. *"foxio_orchestrator, leé el cambio y armá el equipo"* → lee los artefactos,
+   toma los criterios de éxito como done, precarga `tasks.md` en su tablero.
+4. Te muestra capacidades → 📚 de tu librería (directo) + 🌐 candidatas de skills.sh
+   con la reputación que haya. **Aprobás qué instalar.**
+5. Despacha specialists, integra contra los escenarios de los delta-specs, te resume.
+6. En cada milestone: retrospectiva → aprender/podar/guardar → **te pregunta** →
+   registra en `SKILL_LOG.md`.
+7. Al cierre: `tasks.md` con checkboxes, y corrés **`/opsx:archive`** (mergea los
+   delta-specs al source of truth). `/skill-save <nombre>` + `git push` para
+   respaldar las skills mejoradas.
 
-## Catálogo de "sabiduría" relevante en skills.sh (para traer bajo demanda)
-- `brainstorming` — descomposición/ideación (rol "system architect")
-- `writing-plans` + `executing-plans` — el par "project manager"
-- `subagent-driven-development` — patrón Subagents (calidad)
-- `dispatching-parallel-agents` — patrón Teams/paralelo (velocidad) — solo si pedís Teams
-- `verification-before-completion` — pase de verificación antes de cerrar
-- `systematic-debugging`, `test-driven-development` — según necesite el proyecto
-- `find-skills` (vercel-labs), `skill-creator` (anthropics) — ya en la base
+## El CLI `skills` (lo que usa el orquestador)
+| Comando | Uso |
+|---------|-----|
+| `npx skills find "<cap>"` | Buscar en el catálogo |
+| `npx skills add <owner/repo> --skill <n> -a claude-code --copy -y` | Instalar (copia editable) |
+| `npx skills list` | Listar instaladas |
+| `npx skills remove <n>` | Remover del proyecto |
+| `npx skills update <n>` | Actualizar a la última |
+
+> Distinción: `vercel-labs/skills` es el **CLI** (`npx skills`); el **contenido**
+> de skills está en repos como `vercel-labs/agent-skills`, `anthropics/skills`, etc.
+
+## Validar el toolkit
+```bash
+python3 tests/validate.py
+```
+Chequea frontmatter de agentes/comandos, integridad referencial (sin paths
+colgados), formato de la librería, paths personales filtrados e invariantes de la
+lógica del orquestador. Corre en CI (`.github/workflows/validate.yml`). Detalle y
+los evals de comportamiento: ver [`tests/README.md`](tests/README.md).
 
 ## Notas honestas
-- "Conectarse a skills.sh" = el orquestador corre `npx skills find/add/remove` en
-  Bash y lee los SKILL.md. No es magia; es el package manager del ecosistema.
+- "Conectarse a skills.sh" = el orquestador corre `npx skills …` en Bash y lee los
+  `SKILL.md`. No es magia; es el package manager del ecosistema.
 - Seguridad: traés conocimiento de terceros. El gate antes de instalar es a
   propósito. Preferí skills oficiales/auditadas (skills.sh tiene sección audits).
-- Tu dominio (firmware/DSP/STM32) está poco cubierto en el catálogo. Esperá que el
-  orquestador proponga seguido CREAR skills con skill-creator en vez de traerlas.
-  Eso, de paso, te posiciona publicando skills propias bajo Foxio.
-- Sin estado persistente entre sesiones: cada sesión relee el spec y el SKILL_LOG.
-  La "memoria" del sistema vive en el spec-kit, el código, el log y tu librería
-  personal — no en agentes prendidos.
+- Tu dominio (firmware/DSP/STM32) está poco cubierto: esperá que el orquestador
+  proponga CREAR skills con `skill-creator` seguido. Eso te posiciona publicando
+  skills propias bajo Foxio.
+- Sin estado persistente entre sesiones: cada sesión relee el spec, el `SKILL_LOG`
+  y tu librería. La "memoria" vive en el spec-kit, el código, el log y la librería
+  — no en agentes prendidos.
+
+## Licencia
+MIT — ver [LICENSE](LICENSE).

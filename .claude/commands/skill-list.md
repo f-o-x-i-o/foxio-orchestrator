@@ -1,33 +1,36 @@
 ---
-description: Lista todas las skills en la librería personal de Foxio con descripción y origen.
+description: Lista las skills de la librería personal de Foxio (carpetas con SKILL.md) con descripción y origen.
 ---
 
-Mostrá el estado actual de la librería personal de skills.
+Mostrá el estado de tu librería personal de skills.
 
 ## Pasos
 
-1. **Resolvé el path de la librería.**
+1. **Resolvé y validá la librería (fallá ruidoso).**
    ```bash
    LIBRARY="${FOXIO_SKILLS_LIBRARY:-$HOME/Development/foxio-orchestrator/library/skills}"
-   ls "$LIBRARY"/*.md 2>/dev/null | grep -v README.md
+   if [ ! -d "$LIBRARY" ]; then
+     echo "ERROR: no encuentro la librería en '$LIBRARY'. Definí FOXIO_SKILLS_LIBRARY."
+   else
+     find "$LIBRARY" -mindepth 1 -maxdepth 1 -type d -exec test -f '{}/SKILL.md' ';' -print
+   fi
    ```
-   Si la librería está vacía o no existe, informalo con instrucciones de setup
-   (ver `library/skills/README.md`).
+   Si dio ERROR o no hay ninguna carpeta, informalo con el setup
+   (ver `library/skills/README.md`) y terminá.
 
-2. **Para cada `.md` encontrado (excluí `README.md`):**
-   - Leé el bloque `<!-- foxio-library ... -->` si existe (saved, from).
-   - Extraé las primeras líneas de descripción del SKILL.md (título y primer párrafo).
+2. **Para cada carpeta encontrada**, leé `<carpeta>/SKILL.md`:
+   - Frontmatter `name` + `description`.
+   - Bloque `<!-- foxio-library ... -->` si existe (`saved`, `from`).
 
 3. **Presentá una tabla al PO:**
-
    ```
    ## Tu librería personal de skills
-   
-   | Skill | Descripción breve | Guardada | Proyecto origen |
-   |-------|------------------|----------|-----------------|
+
+   | Skill | Descripción | Guardada | Proyecto origen |
+   |-------|-------------|----------|-----------------|
    | ux-designer | ... | 2026-06-08 | ~/Development/... |
    ```
 
-4. **Al pie de la tabla**, mostrá también:
-   - Total de skills en la librería.
-   - Comando recordatorio: `/skill-save [nombre]` para agregar más.
+4. **Al pie:** total de skills + recordatorio `/skill-save [nombre]` para agregar
+   más, y que para usar una en un proyecto el foxio_orchestrator la copia con
+   `cp -R "$LIBRARY/<nombre>" .claude/skills/`.

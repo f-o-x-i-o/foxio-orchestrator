@@ -1,42 +1,49 @@
 # Librería personal de skills — Foxio
 
-Skills descargadas de skills.sh y evolucionadas con conocimiento Foxio.
-Cada una es un `{nombre}.md` en este directorio.
+Tus skills evolucionadas, versionadas en git. Cada skill es una **carpeta**
+`<nombre>/SKILL.md` (+ archivos auxiliares si los tiene) — el mismo formato que
+usa Claude Code y `npx skills`, así que son skills reales y cargables, no docs sueltos.
+
+```
+library/skills/
+  README.md
+  ux-designer/
+    SKILL.md
+  firmware-stm32/
+    SKILL.md
+    checklists/...
+```
 
 ## Cómo funciona
 
-Cada vez que el foxio_orchestrator necesita una capacidad, **mira acá primero**.
-Si encontrá tu versión, la usa directamente (sin ir a skills.sh).
-Si no existe todavía, la busca en el catálogo externo y te ofrece guardarla acá.
-
-Con el tiempo estas skills acumulan tus decisiones de diseño, restricciones
-de plataforma, nomenclatura interna y contexto Foxio — cosas que skills.sh
-no puede saber.
+Cuando el foxio_orchestrator necesita una capacidad, **mira acá primero**. Si
+encuentra tu versión, copia la carpeta al proyecto (`cp -R "$LIBRARY/<nombre>"
+.claude/skills/`) y la usa. Si no existe, la busca en skills.sh y te ofrece
+guardarla acá. Con el tiempo, estas skills acumulan tus decisiones de diseño,
+restricciones de plataforma y contexto Foxio — cosas que skills.sh no sabe.
 
 ## Setup (una vez por máquina)
 
-Agregá esto a tu `.zshrc` / `.bashrc`:
-
+Agregá a tu `.zshrc` / `.bashrc`:
 ```sh
 export FOXIO_SKILLS_LIBRARY="$HOME/Development/foxio-orchestrator/library/skills"
 ```
+Si no la definís, se usa ese path por default. **Si el path no existe, el
+orquestador y los comandos avisan en vez de seguir en silencio** (así no creés que
+"no hay skill" cuando en realidad no la estás viendo).
 
-Si no definís la var, el foxio_orchestrator busca en ese mismo path por defecto.
-
-## Comandos útiles
+## Comandos
 
 | Comando | Qué hace |
 |---------|----------|
-| `/skill-list` | Muestra todas las skills de la librería con descripción |
-| `/skill-save [nombre]` | Guarda/actualiza una skill del proyecto actual a la librería |
+| `/skill-list` | Lista las skills de la librería con descripción y origen |
+| `/skill-save <nombre>` | Guarda/actualiza una skill del proyecto actual acá |
 
-## Respaldar
-
-Esta carpeta está versionada en git. Para respaldar tus skills evolucionadas:
+## Respaldar (es un repo git)
 
 ```sh
 cd ~/Development/foxio-orchestrator
 git add library/skills/
-git commit -m "skill: actualizo [nombre]"
+git commit -m "skill: actualizo <nombre>"
 git push
 ```
